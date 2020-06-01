@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-dir_ind = 1
+dir_ind = 6
 root = 'F:/wangqianwen/flame_img/'
 os.chdir(root)
 dire_name = os.listdir()
@@ -109,7 +109,8 @@ def edge_cnt(input_img, ig_s):
     :param ig_s: ignore size
     :return:
     """
-    contours, hierarchy = cv.findContours(input_img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours_list = []
+    contours, hierarchy = cv.findContours(input_img, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
     dst_in = np.zeros((input_img.shape[0], input_img.shape[1], 3), dtype=np.uint8)
     for i in range(len(contours)):
         cnt = contours[i]
@@ -118,10 +119,12 @@ def edge_cnt(input_img, ig_s):
             continue
         cv.drawContours(dst_in, contours, i, (0, 255, 255), 1)
 
+        contours_list.append(contours[i])
+
     dst_in = cv.resize(dst_in, (4*dst_in.shape[0], 4*dst_in.shape[0]))
     cv.imshow('edge', dst_in)
 
-    return contours, hierarchy
+    return contours_list, hierarchy
 
 
 def cell_info(contours_in):
@@ -148,6 +151,26 @@ def cell_info(contours_in):
     return area_all, length_all, equ_d, cell_num
 
 
+def coordinates_trans(ellipse_in, obj_cor):
+    x_center, y_center = ellipse_in[0]
+    x_trans = int(x_center) - obj_cor[0][0]
+    y_trans = obj_cor[0][1] - int(y_center)
+
+    return x_trans, y_trans
+
+
+def three_d(cnt_pint, ellipse_in):
+
+    c_in = max(ellipse_in[1])
+    a_in = ellipse_in[1][0]
+    b_in = ellipse_in[1][1]
+    x_in = cnt_pint[0]
+    y_in = cnt_pint[1]
+    z_in = c_in*(1-(x_in**2)/(a_in**2)-(y_in**2)/(b_in**2))**0.5
+
+    return x_in, y_in, z_in
+
+
 if __name__ == '__main__':
 
     file_p = pick_out(file_name)
@@ -160,7 +183,7 @@ if __name__ == '__main__':
     x_o, y_o, w_o, h_o = select_roi(background, 'bac')
     background = background[y_o:y_o + h_o, x_o:x_o + w_o]
 
-    cur_frame = cv.imread(path+file_p[500])                  # interface of the object picture######################
+    cur_frame = cv.imread(path+file_p[900])                  # interface of the object picture######################
     cur_frame = cv.cvtColor(cur_frame, cv.COLOR_BGR2GRAY)
     cur_frame = cur_frame[y_o:y_o+h_o, x_o:x_o+w_o]
 
@@ -198,6 +221,7 @@ if __name__ == '__main__':
 
     ret, binary_otsu = cv.threshold(aug_inter, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
     binary_adapt = cv.adaptiveThreshold(aug_inter, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
+    binary_adapt_inv = cv.adaptiveThreshold(aug_inter, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2)
 
     """Find Mask"""
     # ret1, binary_sub = cv.threshold(equ_my, 10, 255, cv.THRESH_BINARY)
@@ -206,7 +230,7 @@ if __name__ == '__main__':
     binary_otsu = cv.dilate(binary_otsu, kernel)
     # cv.imshow('mask_Out', binary_otsu)
     mask_out, ellipsis_out = find_mask(binary_otsu)  # 火焰最小拟合椭圆 ellipsis_out
-    mask_adapt = cv.bitwise_and(mask_out, binary_adapt)
+    mask_adapt = cv.bitwise_and(mask_out, binary_adapt_inv)
 
     """The performance of different  threshold method """
     board = np.zeros((sub_frame.shape[0] + 10, sub_frame.shape[1] * 4), dtype=np.uint8)
@@ -223,13 +247,50 @@ if __name__ == '__main__':
     cv.imwrite('F:/wangqianwen/transient/'+str(dir_ind)+"_"+str(ctr_o)+"_"+str(bgt_o)+'thresh.jpg', board)
 
     """Finding edge of cells"""
-    contours_out, hierarchy_out = edge_cnt(mask_adapt, 0)
+    contours_out, hierarchy_out = edge_cnt(mask_adapt, 5)
 
     """Cell information"""
-    print('The area is: ', cell_info(contours_out)[0])
-    print('The length is: ', cell_info(contours_out)[1])
-    print('The equ_diameter is: ', cell_info(contours_out)[2])
-    print('The numbers of cells is: ', cell_info(contours_out)[3])
+    print('The planer area is: ', cell_info(contours_out)[0])
+    print('The planer length is: ', cell_info(contours_out)[1])
+    print('The planer equ_diameter is: ', cell_info(contours_out)[2])
+    print('The planer numbers of cells is: ', cell_info(contours_out)[3])
+    # print(contours_out[10], type(contours_out[10]), contours_out[10].shape)
+    # print(contours_out[10][5])
+    # print(coordinates_trans(ellipsis_out, contours_out[10][5]))
+
+    """3D Reconstruction"""
+    cnt_point = []
+    cnt_child = []
+    for i_0 in range(len(contours_out)):
+        for j_0 in range(len(contours_out[i_0])):
+            cnt_pt = coordinates_trans(ellipsis_out, contours_out[i_0][j_0])
+            cnt_child.append(three_d(cnt_pt, ellipsis_out))
+
+        cnt_point.append(cnt_child)
+
+    print(cnt_point[0])
+
+    area_all = []
+    for i_o in range(len(contours_out)):
+        mask_board = np.zeros((sub_frame.shape[0], sub_frame.shape[1]), np.uint8)
+        cv.drawContours(mask_board, contours_out, i_o, (255, 255, 255), -1)
+
+        area_sum = 0
+        for row in range(mask_board.shape[0]):
+            for cols in range(mask_board.shape[1]):
+                if mask_board[row][cols] == 255:
+                    x_3d, y_3d = coordinates_trans(ellipsis_out, [(cols, row)])
+                    c_3d = max(ellipsis_out[1])
+                    a_3d = ellipsis_out[1][0]
+                    b_3d = ellipsis_out[1][1]
+                    z_3d = c_3d * (1 - (x_3d ** 2) / (a_3d ** 2) - (y_3d ** 2) / (b_3d ** 2)) ** 0.5
+                    area_sum = area_sum+(1+((c_3d**2)*(x_3d ** 2))/((a_3d ** 4)*(z_3d**2))+((c_3d**2)*(y_3d ** 2))/(
+                            (b_3d ** 4)*(z_3d**2)))**0.5
+
+        area_all.append(area_sum)
+
+    print(area_sum)
 
     cv.waitKey(0)
     cv.destroyAllWindows()
+
