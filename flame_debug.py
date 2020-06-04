@@ -59,8 +59,9 @@ def select_roi(set_img, window_name):
 
 
 def draw_hist(hist_g):
-    plt.plot(hist_g)
-    plt.show()
+    with plt.style.context('seaborn'):
+        plt.plot(hist_g)
+        plt.show()
 
     return
 
@@ -271,19 +272,20 @@ if __name__ == '__main__':
     Z_3 = c_3d*(np.abs(1-contours_points[:, :, 1]**2/b_3d**2-contours_points[:, :, 0]**2/a_3d**2))**0.5
     print(Z_3, Z_3.shape, Z_3.min(), Z_3.max())
     # # #############绘图##############
-    fig = plt.figure()
-    ax = Axes3D(fig)
-    u = np.linspace(0, 2 * np.pi, 100)
-    v = np.linspace(0, np.pi, 100)
-    x_3 = a_3d * np.outer(np.cos(u), np.sin(v))
-    y_3 = b_3d * np.outer(np.sin(u), np.sin(v))
-    z_3 = c_3d * np.outer(np.ones(np.size(u)), np.cos(v))
-    ax.plot_surface(x_3, y_3, z_3, cmap=cm.gray)
-    ax.scatter(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), Z_3.ravel(), s=1)
-    fig.savefig('F:/wangqianwen/transient/'+str(dir_ind)+"_"+str(ctr_o)+"_"+str(bgt_o)+'3d.png')
-    fig2 = plt.figure()
-    plt.plot(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), linestyle='dotted')
-    plt.show()
+    with plt.style.context('ggplot'):
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        u = np.linspace(0, 2 * np.pi, 100)
+        v = np.linspace(0, np.pi, 100)
+        x_3 = a_3d * np.outer(np.cos(u), np.sin(v))
+        y_3 = b_3d * np.outer(np.sin(u), np.sin(v))
+        z_3 = c_3d * np.outer(np.ones(np.size(u)), np.cos(v))
+        ax.plot_surface(x_3, y_3, z_3, cmap=cm.gray)
+        ax.scatter(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), Z_3.ravel(), s=1)
+        fig.savefig('F:/wangqianwen/transient/'+str(dir_ind)+"_"+str(ctr_o)+"_"+str(bgt_o)+'3d.png')
+        fig2 = plt.figure()
+        plt.plot(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), linestyle='dotted')
+        plt.show()
     # area_all = []
     # for i_o in range(len(contours_out)):
     #     mask_board = np.zeros((sub_frame.shape[0], sub_frame.shape[1]), np.uint8)
