@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import numpy as np
 
-dir_ind = 1
+dir_ind = 0
 root = 'F:/wangqianwen/flame_img/'
 os.chdir(root)
 dire_name = os.listdir()
@@ -118,7 +118,7 @@ def edge_cnt(input_img, ig_s):
     for i in range(len(contours)):
         cnt = contours[i]
         area = cv.contourArea(cnt)
-        if area <= ig_s:
+        if area <= ig_s or area > 1500:
             continue
         cv.drawContours(dst_in, contours, i, (0, 255, 255), 1)
 
@@ -253,7 +253,7 @@ if __name__ == '__main__':
 
     """3D Reconstruction"""
     x_center, y_center = ellipsis_out[0]
-    print(ellipsis_out[0])
+    # print(ellipsis_out[0])
 
     for ind in range(len(contours_out)):
         if ind == 0:
@@ -263,14 +263,14 @@ if __name__ == '__main__':
         prim_n = cur_n
 
     contours_points = (prim_n - np.array([int(x_center), int(y_center)]))*np.array([1, -1])
-    print(contours_points, contours_points.shape)
+    # print(contours_points, contours_points.shape)
 
     c_3d = max(ellipsis_out[1]) / 2
     a_3d = ellipsis_out[1][0] / 2
     b_3d = ellipsis_out[1][1] / 2
 
     Z_3 = c_3d*(np.abs(1-contours_points[:, :, 1]**2/b_3d**2-contours_points[:, :, 0]**2/a_3d**2))**0.5
-    print(Z_3, Z_3.shape, Z_3.min(), Z_3.max())
+    # print(Z_3, Z_3.shape, Z_3.min(), Z_3.max())
     # # #############绘图##############
     with plt.style.context('ggplot'):
         fig = plt.figure()
@@ -281,10 +281,18 @@ if __name__ == '__main__':
         y_3 = b_3d * np.outer(np.sin(u), np.sin(v))
         z_3 = c_3d * np.outer(np.ones(np.size(u)), np.cos(v))
         ax.plot_surface(x_3, y_3, z_3, cmap=cm.gray)
-        ax.scatter(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), Z_3.ravel(), s=1)
+        ax.scatter(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), Z_3.ravel(), s=1, c='k', cmap='coolwarm')
+        ax.axis('off')
         fig.savefig('F:/wangqianwen/transient/'+str(dir_ind)+"_"+str(ctr_o)+"_"+str(bgt_o)+'3d.png')
+
         fig2 = plt.figure()
-        plt.plot(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), linestyle='dotted')
+        plt.scatter(contours_points[:, :, 0].ravel(), contours_points[:, :, 1].ravel(), s=1)
+        fig2.savefig('F:/wangqianwen/transient/'+str(dir_ind)+"_"+str(ctr_o)+"_"+str(bgt_o)+'3d_Re.png')
+
+        fig3 = plt.figure()
+        plt.scatter(cell_info(contours_out)[0],  cell_info(contours_out)[1], s=1)
+        fig3.savefig('F:/wangqianwen/transient/' + str(dir_ind) + "_" + str(ctr_o) + "_" + str(bgt_o) + 'area-length.png')
+
         plt.show()
     # area_all = []
     # for i_o in range(len(contours_out)):
