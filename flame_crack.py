@@ -9,7 +9,6 @@ if __name__ == '__main__':
 
     x_o, y_o, w_o, h_o = select_roi(background, 'bac')
     background = background[y_o:y_o + h_o, x_o:x_o + w_o]
-    print(background.shape)
 
     out = cv.VideoWriter('F:/wangqianwen/transient/'+str(dir_ind)+'_output.avi',
                          cv.VideoWriter_fourcc('D', 'I', 'V', 'X'), 20.0,
@@ -21,6 +20,7 @@ if __name__ == '__main__':
     for i_d in range(len(file_p)):
         if i_d == 0:
             continue
+        print('The progress bar:' + str(int(i_d/len(file_p)*100)) + '%')
         cur_frame = cv.imread(path + file_p[i_d])  # interface of the object picture######################
         cur_frame = cv.cvtColor(cur_frame, cv.COLOR_BGR2GRAY)
         cur_frame = cur_frame[y_o:y_o + h_o, x_o:x_o + w_o]
